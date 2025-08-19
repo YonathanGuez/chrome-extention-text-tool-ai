@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Help Redaction IA",
+  "version": "1.0",
+  "description": "Un outil simple pour corriger, améliorer, traduire et générer du texte avec l'IA.",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "favicon-16x16.png",
+      "32": "favicon-32x32.png",
+      "96": "favicon-96x96.png"
+    }
+  },
+  "icons": {
+    "16": "favicon-16x16.png",
+    "32": "favicon-32x32.png",
+    "96": "favicon-96x96.png"
+  },
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://generativelanguage.googleapis.com/"]
+}
