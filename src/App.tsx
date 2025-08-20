@@ -25,10 +25,12 @@ function App() {
 
   const callAIApi = async (promptText: string) => {
     // Check if API key is set
-    if (!apiKeyValue || apiKeyValue === "YOUR_API_KEY_HERE") {
-      setErrorMessage("You need to configure the AI API you want to use");
-      setIsError(true);
-      return;
+    if (!apiKeyValue) {
+      if (apiKeyValue === "YOUR_API_KEY_HERE") {
+        setErrorMessage("You need to configure the AI API you want to use");
+        setIsError(true);
+        return;
+      }
     }
     setIsLoading(true);
     setIsError(false);
@@ -37,19 +39,36 @@ function App() {
     const controller = new AbortController();
     controllerRef.current = controller;
     const { signal } = controller;
-    const apiKey = import.meta.env.VITE_API_AI_KEY || "";
-    const urlAI = import.meta.env.VITE_API_URL_AI || "";
-    const apiUrl = `${urlAI}${apiKey}`;
-    console.log("API URL:", apiUrl);
+    const apiKey = apiKeyValue; // import.meta.env.VITE_API_AI_KEY || "";
+    const urlAI = apiUrlValue; // import.meta.env.VITE_API_URL_AI || "";
+    let apiUrl = "";
+    let localLLM = false;
+    if (urlAI.includes("localhost") || urlAI.includes("127.0.0.1")) {
+      localLLM = true;
+    }
     try {
-      const payload = {
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: promptText }],
-          },
-        ],
-      };
+      let payload;
+      if (localLLM) {
+        apiUrl = `${urlAI}`;
+        payload = {
+          model: apiKey, // Change this to your model's identifier if needed
+          messages: [{ role: "user", content: promptText }],
+          temperature: 0.7,
+          max_tokens: -1,
+          stream: false,
+        };
+      } else {
+        apiUrl = `${urlAI}${apiKey}`;
+        payload = {
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: promptText }],
+            },
+          ],
+        };
+      }
+      console.log("API URL:", apiUrl);
 
       const maxRetries = 5;
       let retryCount = 0;
@@ -57,9 +76,12 @@ function App() {
 
       while (retryCount < maxRetries) {
         try {
+          console.log("Sending request to API:", JSON.stringify(payload));
           response = await fetch(apiUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+            },
             body: JSON.stringify(payload),
             signal,
           });
@@ -102,7 +124,18 @@ function App() {
 
       const result = await response.json();
 
-      if (
+      if (localLLM) {
+        if (
+          result.choices &&
+          result.choices.length > 0 &&
+          result.choices[0].message
+        ) {
+          const text = result.choices[0].message.content;
+          setOutputText(text);
+        } else {
+          throw new Error("Invalid API response structure.");
+        }
+      } else if (
         result.candidates &&
         result.candidates.length > 0 &&
         result.candidates[0].content &&
@@ -263,7 +296,7 @@ function App() {
                     htmlFor="apiKey"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mr-3 mb-4 min-w-max"
                   >
-                    Clé API:
+                    Clé API (or Model AI if using local server):
                   </label>
                   <input
                     type="text"

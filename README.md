@@ -40,7 +40,38 @@ This extension was created to save you time and streamline your workflow. Instea
 
 ## Configuration
 
-- Set your AI API key in the extension options for full functionality.
+### Set Model AI :
+
+- Set Gemini API:
+
+Add URL Gemini :
+
+```
+https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=
+```
+
+Add API KEY:
+
+1. Go to `https://aistudio.google.com/apikey`
+2. Build a API key
+3. Add the key in the configuration
+
+### Set Local AI Model :
+
+- Set your Local LMSTUDIO:
+
+URL:
+
+```
+http://localhost:1234/api/v0/chat/completions
+```
+
+Model AI :
+it will alone fond which service SLM or LLM is up in local
+
+```
+granite-3.0-2b-instruct
+```
 
 ## License
 
