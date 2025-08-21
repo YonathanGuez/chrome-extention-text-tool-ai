@@ -70,7 +70,7 @@ function App() {
       }
       console.log("API URL:", apiUrl);
 
-      const maxRetries = 5;
+      const maxRetries = 3;
       let retryCount = 0;
       let response;
 
