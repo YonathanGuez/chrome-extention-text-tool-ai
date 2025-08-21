@@ -25,7 +25,7 @@ function App() {
 
   const callAIApi = async (promptText: string) => {
     // Check if API key is set
-    if (!apiKeyValue) {
+    if (!apiKeyValue || apiKeyValue === "YOUR_API_KEY_HERE") {
       if (apiKeyValue === "YOUR_API_KEY_HERE") {
         setErrorMessage("You need to configure the AI API you want to use");
         setIsError(true);
