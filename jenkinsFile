@@ -1,0 +1,57 @@
+node(""){
+    stage("clean"){
+        cleanWs()
+    }
+    stage("clone"){
+        cloneGit("chrome-extention-text-tool-ai","main","github-yoni")
+    }
+    stage("config Register Local"){
+        try {
+            
+        isUnixCommand {
+            "docker run -d -p 5000:5000 --name registry registry:3"
+        }
+        }catch(Exception e){
+            echo "An error occurred during the Test stage: ${e.message}"
+        }
+    }
+    stage("docker build"){
+        isUnixCommand {
+            [
+                'docker build -t localhost:5000/chrome-extension:latest .',
+                'docker push localhost:5000/chrome-extension:latest',
+                "docker run -d --name=chrome-extension -v ${WORKSPACE}:/tmp -w /app localhost:5000/chrome-extension:latest tail -f /dev/null",
+                'docker exec -t chrome-extension /bin/sh -c "apk update && apk add zip',
+                'docker exec -t chrome-extension /bin/sh -c "zip -jr chrome_extension_text_tool_ai.zip dist/*"',
+                'docker exec -t chrome-extension /bin/sh -c "mv chrome_extension_text_tool_ai.zip /tmp"'
+            ]
+        }
+        archiveArtifacts artifacts: 'chrome_extension_text_tool_ai.zip', fingerprint: true
+    }
+    stage('clean all')
+    {
+         isUnixCommand {
+            ['docker rm -f chrome-extension',
+            'docker rmi -f localhost:5000/chrome-extension',
+            'docker rm -f registry'
+            ]
+         }
+    }
+}
+
+def cloneGit(String repository,String branch,String credential,String URLGit="git@github.com:YonathanGuez/"){
+    git branch: "${branch}",
+        credentialsId: "${credential}",
+        url: "${URLGit}${repository}.git"
+}
+
+def isUnixCommand(Closure commandBlock) {
+    def commands = commandBlock.call()
+        // Check if the result is a list and join the commands with newlines.
+    def commandString = (commands instanceof List) ? commands.join('\n') : commands
+    if (isUnix()) {
+        sh commandString
+    } else {
+        bat commandString
+    }
+}
