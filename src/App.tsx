@@ -189,7 +189,7 @@ function App() {
       controllerRef.current.abort();
     }
     const prompt = `Please enhance the following text for a more professional and impressive impression. Respond with only the enhanced text, and nothing else.\n\nText to enhance:\n"${inputText}"`;
-    const prompt2 = `Améliorez le texte suivant pour une impression plus professionnelle et impressionnante. Ne répondez qu'avec le texte amélioré, et rien d'autre.\n\nTexte à améliorer:\n"${inputText}"`;
+    const prompt2 = `Améliorez le texte suivant pour une impression plus professionnelle et impressionnante. Ne répondez qu'avec le texte amélioré, ne rajoutez pas de note et rien d'autre,seulement le texte améliore.\n\nTexte à améliorer:\n"${inputText}"`;
     if (targetLanguage === "French") {
       callAIApi(prompt2);
     } else {
@@ -294,7 +294,7 @@ function App() {
                       htmlFor="apiUrl"
                       className="block text-sm font-medium text-gray-700 dark:text-gray-300 mr-3 mb-4 min-w-max"
                     >
-                      URL :
+                      URL Gemini :
                     </label>
                   </div>
                   <textarea
@@ -310,7 +310,7 @@ function App() {
                     htmlFor="apiKey"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mr-3 mb-4 min-w-max"
                   >
-                    Clé API (or Model AI if using local server):
+                    Clé API :
                   </label>
                   <input
                     type="text"
@@ -321,7 +321,29 @@ function App() {
                   />
                 </div>
               </div>
-
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  Téléchargez le logiciel LMStudio depuis{" "}
+                  <a
+                    href="https://lmstudio.ai/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    https://lmstudio.ai/
+                  </a>
+                  {", "}
+                  c'est le Meilleur moyen de privatiser votre IA en local.
+                  <br />
+                  N'oubliez pas de lancer le serveur et de verifiez que l'option
+                  CORS est activée.
+                  <br />
+                  <br />
+                  URL Gemini = http://127.0.0.1:1234/v1/chat/completions
+                  <br />
+                  Clé API = bartowski/Phi-3.5-mini-instruct-GGUF
+                </p>
+              </div>
               <div className="mt-6 flex justify-center">
                 <button
                   onClick={handleSaveSettings}
