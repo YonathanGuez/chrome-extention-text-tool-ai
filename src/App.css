@@ -4,7 +4,16 @@
   padding: 2rem;
   text-align: center;
 } */
+.input_copy .icon {
+  display: block;
+  max-width: 25px;
+  cursor: pointer;
+  float: right;
+}
 
+.input_copy .icon img {
+  max-width: 25px;
+}
 #root {
   width: 700px;
   height: 100%;

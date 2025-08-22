@@ -22,7 +22,15 @@ function App() {
       localStorage.getItem("apiUrlValue") ||
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key="
   );
-
+  const copyTextArea = async () => {
+    const copyText = document.getElementById(
+      "outputText"
+    ) as HTMLInputElement | null;
+    if (copyText) {
+      copyText.select();
+      document.execCommand("copy");
+    }
+  };
   const callAIApi = async (promptText: string) => {
     // Check if API key is set
     if (!apiKeyValue || apiKeyValue === "YOUR_API_KEY_HERE") {
@@ -32,138 +40,134 @@ function App() {
         return;
       }
     }
-    setIsLoading(true);
-    setIsError(false);
-    setOutputText("");
+    if (apiKeyValue !== "YOUR_API_KEY_HERE") {
+      setIsLoading(true);
+      setIsError(false);
+      setOutputText("");
 
-    const controller = new AbortController();
-    controllerRef.current = controller;
-    const { signal } = controller;
-    const apiKey = apiKeyValue; // import.meta.env.VITE_API_AI_KEY || "";
-    const urlAI = apiUrlValue; // import.meta.env.VITE_API_URL_AI || "";
-    let apiUrl = "";
-    let localLLM = false;
-    if (urlAI.includes("localhost") || urlAI.includes("127.0.0.1")) {
-      localLLM = true;
-    }
-    try {
-      let payload;
-      if (localLLM) {
-        apiUrl = `${urlAI}`;
-        payload = {
-          model: apiKey, // Change this to your model's identifier if needed
-          messages: [{ role: "user", content: promptText }],
-          temperature: 0.7,
-          max_tokens: -1,
-          stream: false,
-        };
-      } else {
-        apiUrl = `${urlAI}${apiKey}`;
-        payload = {
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: promptText }],
-            },
-          ],
-        };
-      }
-      console.log("API URL:", apiUrl);
+      const controller = new AbortController();
+      controllerRef.current = controller;
+      const { signal } = controller;
+      const isLocalLLM =
+        apiUrlValue.includes("localhost") || apiUrlValue.includes("127.0.0.1");
 
-      const maxRetries = 3;
-      let retryCount = 0;
-      let response;
+      // Configure API request based on whether it's a local or external LLM
+      const apiConfig = {
+        local: {
+          url: apiUrlValue,
+          payload: {
+            model: apiKeyValue,
+            messages: [{ role: "user", content: promptText }],
+            temperature: 0.7,
+            max_tokens: -1,
+            stream: false,
+          },
+        },
+        external: {
+          url: `${apiUrlValue}${apiKeyValue}`,
+          payload: {
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: promptText }],
+              },
+            ],
+          },
+        },
+      };
 
-      while (retryCount < maxRetries) {
-        try {
-          console.log("Sending request to API:", JSON.stringify(payload));
-          response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-            signal,
-          });
+      const { url, payload } = isLocalLLM
+        ? apiConfig.local
+        : apiConfig.external;
 
-          if (response.status === 429) {
-            const delay = Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
-            await new Promise((res) => setTimeout(res, delay));
-            retryCount++;
-            continue;
-          }
+      try {
+        console.log("API URL:", url);
+        const maxRetries = 3;
+        let retryCount = 0;
+        let response;
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
+        while (retryCount < maxRetries) {
+          try {
+            console.log("Sending request to API:", JSON.stringify(payload));
+            response = await fetch(url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
+              signal,
+            });
 
-          break;
-        } catch (error) {
-          if (error instanceof Error) {
-            if (error.name === "AbortError") {
-              throw error;
+            if (response.status === 429) {
+              const delay =
+                Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
+              await new Promise((res) => setTimeout(res, delay));
+              retryCount++;
+              continue;
             }
-            console.error("Fetch error:", error);
-            if (retryCount >= maxRetries - 1) {
-              throw error;
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const delay = Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
-            await new Promise((res) => setTimeout(res, delay));
-            retryCount++;
-          } else {
-            // Handle non-Error exceptions
-            setErrorMessage("An unknown error occurred.");
-            setIsError(true);
+
+            break;
+          } catch (error) {
+            if (error instanceof Error) {
+              if (error.name === "AbortError") {
+                throw error;
+              }
+              console.error("Fetch error:", error);
+              if (retryCount >= maxRetries - 1) {
+                throw error;
+              }
+              const delay =
+                Math.pow(2, retryCount) * 1000 + Math.random() * 1000;
+              await new Promise((res) => setTimeout(res, delay));
+              retryCount++;
+            } else {
+              // Handle non-Error exceptions
+              setErrorMessage("An unknown error occurred.");
+              setIsError(true);
+            }
           }
         }
-      }
 
-      if (!response || !response.ok) {
-        throw new Error("Failed to fetch from API after multiple retries.");
-      }
+        if (!response || !response.ok) {
+          throw new Error("Failed to fetch from API after multiple retries.");
+        }
 
-      const result = await response.json();
+        const result = await response.json();
+        let outputText;
+        // Extract text from the API response based on the model type
+        if (isLocalLLM) {
+          outputText = result.choices?.[0]?.message?.content;
+        } else {
+          outputText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        }
 
-      if (localLLM) {
-        if (
-          result.choices &&
-          result.choices.length > 0 &&
-          result.choices[0].message
-        ) {
-          const text = result.choices[0].message.content;
-          setOutputText(text);
+        if (outputText) {
+          setOutputText(outputText);
         } else {
           throw new Error("Invalid API response structure.");
         }
-      } else if (
-        result.candidates &&
-        result.candidates.length > 0 &&
-        result.candidates[0].content &&
-        result.candidates[0].content.parts &&
-        result.candidates[0].content.parts.length > 0
-      ) {
-        const text = result.candidates[0].content.parts[0].text;
-        setOutputText(text);
-      } else {
-        throw new Error("Invalid API response structure.");
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.name === "AbortError") {
-          console.log("API request aborted.");
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.name === "AbortError") {
+            console.log("API request aborted.");
+          } else {
+            console.error("Failed to fetch API response:", error);
+            setErrorMessage(error.message);
+            setIsError(true);
+          }
         } else {
-          console.error("Failed to fetch API response:", error);
-          setErrorMessage(error.message);
+          // Handle non-Error exceptions
+          setErrorMessage("An unknown error occurred.");
           setIsError(true);
         }
-      } else {
-        // Handle non-Error exceptions
-        setErrorMessage("An unknown error occurred.");
-        setIsError(true);
+      } finally {
+        setIsLoading(false);
+        controllerRef.current = null;
       }
-    } finally {
-      setIsLoading(false);
-      controllerRef.current = null;
     }
   };
 
@@ -172,7 +176,12 @@ function App() {
       controllerRef.current.abort();
     }
     const prompt = `Please correct any grammar, spelling, or punctuation errors in the following text. Respond with only the corrected text, and nothing else.\n\nText to correct:\n"${inputText}"`;
-    callAIApi(prompt);
+    const prompt2 = `Corrigez les erreurs de grammaire, d'orthographe et de ponctuation dans le texte suivant. Ne répondez qu'avec le texte corrigé, et rien d'autre..\n\nTexte à corriger:\n"${inputText}"`;
+    if (targetLanguage === "French") {
+      callAIApi(prompt2);
+    } else {
+      callAIApi(prompt);
+    }
   };
 
   const handleEnhance = () => {
@@ -180,7 +189,12 @@ function App() {
       controllerRef.current.abort();
     }
     const prompt = `Please enhance the following text for a more professional and impressive impression. Respond with only the enhanced text, and nothing else.\n\nText to enhance:\n"${inputText}"`;
-    callAIApi(prompt);
+    const prompt2 = `Améliorez le texte suivant pour une impression plus professionnelle et impressionnante. Ne répondez qu'avec le texte amélioré, et rien d'autre.\n\nTexte à améliorer:\n"${inputText}"`;
+    if (targetLanguage === "French") {
+      callAIApi(prompt2);
+    } else {
+      callAIApi(prompt);
+    }
   };
 
   const handleTranslate = () => {
@@ -396,6 +410,16 @@ function App() {
           >
             Résultat de l'IA
           </label>
+          <div className="input_copy">
+            <span className="icon" onClick={copyTextArea}>
+              <img
+                src="http://clipground.com/images/copy-4.png"
+                title="Click to Copy"
+                className="w-6 h-6 cursor-pointer"
+              />
+            </span>
+          </div>
+
           <textarea
             id="outputText"
             value={outputText}
